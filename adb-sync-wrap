@@ -1,10 +1,10 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 echo_msg() {
     if $is_gnome; then
-        notify-send -i org.gnome.Nautilus --hint=int:transient:1 ADB-Sync-Wrap "$1"
+        notify-send -i org.gnome.Nautilus --hint=int:transient:1 ADB-Sync-Wrap $1
     else
-        echo "$1"
+        echo $1
     fi
 }
 
@@ -29,17 +29,17 @@ kde_connect() {
 }
 
 show_help() {
-    echo "Usage: adb-sync-wrap [-dgh] [-s serial] [-k kdevice_name] [-io] PC_PATH MOBILE_PATH "
-    echo "Example: adb-sync-wrap -dg -k OnePlus -i pc1,pc2 mb1,mb2"
-    echo "PATH can be array that delimiter is ','. Map of sync direction: pc1--mb1, pc2--mb2. "
-    echo "-d, --delete                   Delete files from destinations that are not present on sources."
-    echo "-g, --gnome                    Enable gnome notification."
-    echo "-h, --help                     Show help."
-    echo "-s, --serial                   Specify android deivce serial to connect adb."
-    echo "-k, --kdeconnect               Connect adb by wireless that using KDE Connect(GSconnect) persistent ip address according to kdevice_name."
-    echo "                               When [-s serial] is using, [-k kdeconnect] is invalid."
-    echo "-i, --input                    Input, mobile->pc. The direction must be either input or output."
-    echo "-o, --output                   Output, pc->mobile. The direction must be either input or output."
+    echo 'Usage: adb-sync-wrap [-dgh] [-s serial] [-k kdevice_name] [-io] PC_PATH MOBILE_PATH '
+    echo 'Example: adb-sync-wrap -dg -k OnePlus -i pc1,pc2 mb1,mb2'
+    echo 'PATH can be array that delimiter is ','. Map of sync direction: pc1--mb1, pc2--mb2. '
+    echo '-d, --delete                   Delete files from destinations that are not present on sources.'
+    echo '-g, --gnome                    Enable gnome notification.'
+    echo '-h, --help                     Show help.'
+    echo '-s, --serial                   Specify android deivce serial to connect adb.'
+    echo '-k, --kdeconnect               Connect adb by wireless that using KDE Connect(GSconnect) persistent ip address according to kdevice_name.'
+    echo '                               When [-s serial] is using, [-k kdeconnect] is invalid.'
+    echo '-i, --input                    Input, mobile->pc. The direction must be either input or output.'
+    echo '-o, --output                   Output, pc->mobile. The direction must be either input or output.'
 }
 
 OPTIONS=dghik:os:
@@ -48,7 +48,7 @@ LONGOPTS=delete,gnome,help,input,kdeconnect:,output,serial:
 PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name $0 -- $@)
 
 if [[ $? != 0 ]]; then
-    echo_msg "Parase with invalid parameter."
+    echo_msg 'Parase with invalid parameter.'
     exit 1
 fi
 eval set -- $PARSED
@@ -64,7 +64,7 @@ del_sum=0
 while true; do
     case $1 in
     -d | --delete)
-        delete=" --delete "
+        delete=' --delete '
         shift
         ;;
     -g | --gnome)
@@ -76,11 +76,11 @@ while true; do
         shift 2
         ;;
     -i | --input)
-        direction="i"
+        direction='i'
         shift
         ;;
     -o | --output)
-        direction="o"
+        direction='o'
         shift
         ;;
     -s | --serial)
@@ -96,7 +96,7 @@ while true; do
         break
         ;;
     *)
-        echo_msg "Parased parameter unknown."
+        echo_msg 'Parased parameter unknown.'
         exit 2
         ;;
     esac
@@ -106,12 +106,12 @@ readarray -td, pc_array <<<$1
 readarray -td, mobile_array <<<$2
 
 if [[ ${#mobile_array[@]} != ${#pc_array[@]} ]]; then
-    echo_msg "The size of mobile dir isn't equal the pc."
+    echo_msg 'The size of mobile dir do not equal the pc.'
     exit 3
 fi
 
-if [[ $direction != "i" && $direction != "o" ]]; then
-    echo_msg "The direction must be either input or output."
+if [[ $direction =~ ^[^io]$ ]]; then
+    echo_msg 'The direction must be either input or output.'
     exit 4
 fi
 
@@ -119,33 +119,33 @@ if [[ -n $kdevice_name && -z $serial ]]; then
     adb disconnect >/dev/null
     ret=$(kde_connect $kdevice_name)
     if [[ $ret != 0 ]]; then
-        echo_msg "Can't connect device by KDE Connect persistent ip."
+        echo_msg 'Can not connect device by KDE Connect persistent ip.'
         exit 5
     fi
 fi
 
-if [[ $direction == 'i' ]]; then
-    echo_msg "Start to adb sync from mobile to PC."
+if [[ $direction == i ]]; then
+    echo_msg 'Start to adb sync from mobile to PC.'
 else
-    echo_msg "Start to adb sync from PC to mobile."
+    echo_msg 'Start to adb sync from PC to mobile.'
 fi
 
 for i in ${!mobile_array[@]}; do
-    mobile_array[i]=$(tr -d "\n" <<<${mobile_array[i]})
-    pc_array[i]=$(tr -d "\n" <<<${pc_array[i]})
+    mobile_array[i]=$(tr -d '\n' <<<${mobile_array[i]})
+    pc_array[i]=$(tr -d '\n' <<<${pc_array[i]})
     mobile_array[i]=$(sed "s|^~|$HOME|g" <<<${mobile_array[i]})
     pc_array[i]=$(sed "s|^~|$HOME|g" <<<${pc_array[i]})
     if [[ ! ${mobile_array[i]} =~ /$ ]]; then
-        mobile_array[i]=${mobile_array[i]}"/"
+        mobile_array[i]="${mobile_array[i]}/"
     fi
-    if [[ $direction == 'i' ]]; then
-        ret=$(adb-sync $delete $serial -R ${mobile_array[i]} ${pc_array[i]} 2>&1 | grep "Pull")
-        add_count=$(echo "$ret" | grep "Pull:" -c)
-        del_count=$(echo "$ret" | grep "Pull-Delete" -c)
+    if [[ $direction == i ]]; then
+        ret=$(adb-sync $delete $serial -R ${mobile_array[i]} ${pc_array[i]} 2>&1 | grep 'Pull')
+        add_count=$(echo "$ret" | grep 'Pull:' -c)
+        del_count=$(echo "$ret" | grep 'Pull-Delete' -c)
     else
-        ret=$(adb-sync $delete $serial ${pc_array[i]} ${mobile_array[i]} 2>&1 | grep "Push")
-        add_count=$(echo "$ret" | grep "Push:" -c)
-        del_count=$(echo "$ret" | grep "Push-Delete" -c)
+        ret=$(adb-sync $delete $serial ${pc_array[i]} ${mobile_array[i]} 2>&1 | grep 'Push')
+        add_count=$(echo "$ret" | grep 'Push:' -c)
+        del_count=$(echo "$ret" | grep 'Push-Delete' -c)
     fi
     add_sum=$(($add_sum + $add_count))
     del_sum=$(($del_sum + $del_count))
